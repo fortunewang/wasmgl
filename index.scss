@@ -1,0 +1,22 @@
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+body {
+  margin: 0;
+}
+
+.wasmgl-layout {
+  display: flex;
+  position: relative;
+}
+
+.wasmgl-content {
+  background-color: #f0f2f5;
+  padding: 16px;
+}
+
+.wasmgl-sidemenu {
+  height: 100%;
+}
