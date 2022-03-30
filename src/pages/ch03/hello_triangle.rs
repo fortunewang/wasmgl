@@ -1,0 +1,178 @@
+use js_sys::Float32Array;
+use wasm_bindgen::{JsCast, JsError, JsValue};
+use web_sys::{HtmlCanvasElement, WebGl2RenderingContext as GL};
+use yew::NodeRef;
+
+const VSHADER_SOURCE: &str = "
+attribute vec4 a_Position;
+void main() {
+    gl_Position = a_Position;
+    gl_PointSize = 10.0;
+}
+";
+
+const FSHADER_SOURCE: &str = "
+void main() {
+  gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+}
+";
+
+// The number of vertices
+const N: i32 = 3;
+
+const VERTICES: &[f32] = &[0.0, 0.5, -0.5, -0.5, 0.5, -0.5];
+
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Mode {
+    Triangle = GL::TRIANGLES,
+    Lines = GL::LINES,
+    LineStrip = GL::LINE_STRIP,
+    LineLoop = GL::LINE_LOOP,
+}
+
+pub enum Message {
+    SetupGL,
+    ChangeMode(Mode),
+}
+
+pub struct HelloTriangle {
+    gl: Option<GL>,
+    canvas: NodeRef,
+    mode: Mode,
+
+    onclick_triangle: yew::Callback<web_sys::MouseEvent>,
+    onclick_lines: yew::Callback<web_sys::MouseEvent>,
+    onclick_line_strip: yew::Callback<web_sys::MouseEvent>,
+    onclick_line_loop: yew::Callback<web_sys::MouseEvent>,
+}
+
+impl HelloTriangle {
+    fn get_canvas(&self) -> Option<HtmlCanvasElement> {
+        self.canvas.cast::<HtmlCanvasElement>()
+    }
+
+    fn setup_gl(&mut self) -> Result<bool, JsValue> {
+        let canvas = self.get_canvas().unwrap();
+
+        let gl = canvas
+            .get_context("webgl2")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<GL>()
+            .unwrap();
+
+        let vert_shader = crate::utils::compile_shader(&gl, GL::VERTEX_SHADER, VSHADER_SOURCE)?;
+        let frag_shader = crate::utils::compile_shader(&gl, GL::FRAGMENT_SHADER, FSHADER_SOURCE)?;
+        let program = crate::utils::link_program(&gl, &vert_shader, &frag_shader)?;
+        gl.use_program(Some(&program));
+
+        let vertices = Float32Array::from(VERTICES);
+        let vertex_buffer = gl.create_buffer();
+        if vertex_buffer.is_none() {
+            return Err(JsError::new("Failed to create the buffer object").into());
+        }
+        gl.bind_buffer(GL::ARRAY_BUFFER, vertex_buffer.as_ref());
+        gl.buffer_data_with_opt_array_buffer(
+            GL::ARRAY_BUFFER,
+            Some(&vertices.buffer()),
+            GL::STATIC_DRAW,
+        );
+
+        let a_position = gl.get_attrib_location(&program, "a_Position");
+        if a_position < 0 {
+            return Err(JsError::new("Failed to get the storage location of a_Position").into());
+        }
+
+        gl.vertex_attrib_pointer_with_i32(a_position as u32, 2, GL::FLOAT, false, 0, 0);
+        gl.enable_vertex_attrib_array(a_position as u32);
+
+        // Specify the color for clearing <canvas>
+        gl.clear_color(0.0, 0.0, 0.0, 1.0);
+
+        self.rerender_triangle(&gl);
+
+        self.gl = Some(gl);
+        Ok(true)
+    }
+
+    fn rerender_triangle(&self, gl: &GL) {
+        // Clear <canvas>
+        gl.clear(GL::COLOR_BUFFER_BIT);
+
+        // Draw the rectangle
+        gl.draw_arrays(self.mode as u32, 0, N);
+    }
+}
+
+impl yew::Component for HelloTriangle {
+    type Message = Message;
+    type Properties = ();
+
+    fn create(ctx: &yew::Context<Self>) -> Self {
+        let link = ctx.link();
+        let onclick_triangle = link.callback(|_| Message::ChangeMode(Mode::Triangle));
+        let onclick_lines = link.callback(|_| Message::ChangeMode(Mode::Lines));
+        let onclick_line_strip = link.callback(|_| Message::ChangeMode(Mode::LineStrip));
+        let onclick_line_loop = link.callback(|_| Message::ChangeMode(Mode::LineLoop));
+        Self {
+            gl: None,
+            canvas: NodeRef::default(),
+            mode: Mode::Triangle,
+
+            onclick_triangle,
+            onclick_lines,
+            onclick_line_strip,
+            onclick_line_loop,
+        }
+    }
+
+    fn update(&mut self, _ctx: &yew::Context<Self>, msg: Self::Message) -> bool {
+        match msg {
+            Message::SetupGL => self.setup_gl().unwrap(),
+            Message::ChangeMode(mode) => {
+                self.mode = mode;
+                if let Some(gl) = self.gl.as_ref() {
+                    self.rerender_triangle(gl);
+                }
+                true
+            }
+        }
+    }
+
+    fn view(&self, _ctx: &yew::Context<Self>) -> yew::Html {
+        yew::html! {
+            <div>
+                <canvas
+                    ref={self.canvas.clone()}
+                    width="400"
+                    height="400"
+                />
+                <p>
+                    <button
+                        onclick={self.onclick_triangle.clone()}
+                        disabled={self.mode == Mode::Triangle}
+                    >{ "TRIANGLE" }</button>
+                    <button
+                        onclick={self.onclick_lines.clone()}
+                        disabled={self.mode == Mode::Lines}
+                    >{ "LINES" }</button>
+                    <button
+                        onclick={self.onclick_line_strip.clone()}
+                        disabled={self.mode == Mode::LineStrip}
+                    >{ "LINE_STRIP" }</button>
+                    <button
+                        onclick={self.onclick_line_loop.clone()}
+                        disabled={self.mode == Mode::LineLoop}
+                    >{ "LINE_LOOP" }</button>
+                </p>
+            </div>
+        }
+    }
+
+    fn rendered(&mut self, ctx: &yew::Context<Self>, first_render: bool) {
+        if first_render {
+            ctx.link().send_message(Message::SetupGL);
+        }
+    }
+}

@@ -1,18 +1,39 @@
 use wasm_bindgen::{JsCast, JsError, JsValue};
-use web_sys::{Event, HtmlCanvasElement, MouseEvent, WebGl2RenderingContext as GL};
+use web_sys::{
+    Event, HtmlCanvasElement, MouseEvent, WebGl2RenderingContext as GL, WebGlUniformLocation,
+};
 use yew::NodeRef;
 
-const VSHADER_SOURCE: &str = "
-attribute vec4 a_Position;
+fn color_of_point(x: f32, y: f32) -> (f32, f32, f32, f32) {
+    if x >= 0.0 && y >= 0.0 {
+        // First quadrant
+        (1.0, 0.0, 0.0, 1.0) // Red
+    } else if x < 0.0 && y < 0.0 {
+        // Third quadrant
+        (0.0, 1.0, 0.0, 1.0) // Green
+    } else {
+        // Others
+        (1.0, 1.0, 1.0, 1.0) // White
+    }
+}
+
+const VSHADER_SOURCE: &str = "#version 300 es
+in vec4 a_Position;
 void main() {
     gl_Position = a_Position;
     gl_PointSize = 10.0;
 }
 ";
 
-const FSHADER_SOURCE: &str = "
+// In GLSL 100 your fragment shader would set the special variable gl_FragColor
+// to set the output of the shader.
+// In GLSL 300 es you declare your own output variable and then set it.
+const FSHADER_SOURCE: &str = "#version 300 es
+precision mediump float;
+uniform vec4 u_FragColor;
+out vec4 outColor;
 void main() {
-  gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    outColor = u_FragColor;
 }
 ";
 
@@ -34,14 +55,15 @@ fn on_click(ev: MouseEvent) -> Message {
     Message::Click(x - rect.left() as f32, y - rect.top() as f32)
 }
 
-pub struct ClickedPoints {
+pub struct ColoredPoints {
     gl: Option<GL>,
     canvas: NodeRef,
     a_position: i32,
+    u_frag_color: Option<WebGlUniformLocation>,
     points: Vec<(f32, f32)>,
 }
 
-impl ClickedPoints {
+impl ColoredPoints {
     fn get_canvas(&self) -> Option<HtmlCanvasElement> {
         self.canvas.cast::<HtmlCanvasElement>()
     }
@@ -67,6 +89,12 @@ impl ClickedPoints {
             return Err(JsError::new("Failed to get the storage location of a_Position").into());
         }
 
+        // Get the storage location of u_FragColor
+        let u_frag_color = gl.get_uniform_location(&program, "u_FragColor");
+        if u_frag_color.is_none() {
+            return Err(JsError::new("Failed to get the storage location of u_FragColor").into());
+        }
+
         // Specify the color for clearing <canvas>
         gl.clear_color(0.0, 0.0, 0.0, 1.0);
 
@@ -75,6 +103,7 @@ impl ClickedPoints {
 
         self.gl = Some(gl);
         self.a_position = a_position;
+        self.u_frag_color = u_frag_color;
         Ok(true)
     }
 
@@ -95,6 +124,8 @@ impl ClickedPoints {
             for (x, y) in self.points.iter() {
                 // Pass the position of a point to a_Position variable
                 gl.vertex_attrib3f(self.a_position as u32, *x, *y, 0.0);
+                let (r, g, b, a) = color_of_point(*x, *y);
+                gl.uniform4f(self.u_frag_color.as_ref(), r, g, b, a);
 
                 // Draw
                 gl.draw_arrays(GL::POINTS, 0, 1);
@@ -104,7 +135,7 @@ impl ClickedPoints {
     }
 }
 
-impl yew::Component for ClickedPoints {
+impl yew::Component for ColoredPoints {
     type Message = Message;
     type Properties = ();
 
@@ -113,6 +144,7 @@ impl yew::Component for ClickedPoints {
             gl: None,
             canvas: NodeRef::default(),
             a_position: -1,
+            u_frag_color: None,
             points: Vec::new(),
         }
     }
