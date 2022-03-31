@@ -17,6 +17,14 @@ pub fn sidemenu() -> Html {
             <li><Link<Page> to={Page::MultiPoint}>{ "MultiPoint" }</Link<Page>></li>
             <li><Link<Page> to={Page::HelloTriangle}>{ "HelloTriangle" }</Link<Page>></li>
             <li><Link<Page> to={Page::HelloQuad}>{ "HelloQuad" }</Link<Page>></li>
+            <li><Link<Page> to={Page::TranslatedTriangle}>{ "TranslatedTriangle" }</Link<Page>></li>
+            <li><Link<Page> to={Page::TranslatedTriangle_Matrix}>{ "TranslatedTriangle_Matrix" }</Link<Page>></li>
+            <li><Link<Page> to={Page::RotatedTriangle}>{ "RotatedTriangle" }</Link<Page>></li>
+            <li><Link<Page> to={Page::RotatedTriangle_Matrix}>{ "RotatedTriangle_Matrix" }</Link<Page>></li>
+            <li><Link<Page> to={Page::ScaledTriangle_Matrix}>{ "ScaledTriangle_Matrix" }</Link<Page>></li>
+
+            <li><Link<Page> to={Page::RotatedTriangle_Matrix4}>{ "RotatedTriangle_Matrix4" }</Link<Page>></li>
+            <li><Link<Page> to={Page::RotatedTranslatedTriangle}>{ "RotatedTranslatedTriangle" }</Link<Page>></li>
         </ul>
         </div>
     }

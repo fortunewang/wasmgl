@@ -7,7 +7,6 @@ const VSHADER_SOURCE: &str = "
 attribute vec4 a_Position;
 void main() {
     gl_Position = a_Position;
-    gl_PointSize = 10.0;
 }
 ";
 
@@ -25,7 +24,7 @@ const VERTICES: &[f32] = &[0.0, 0.5, -0.5, -0.5, 0.5, -0.5];
 #[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
-    Triangle = GL::TRIANGLES,
+    Triangles = GL::TRIANGLES,
     Lines = GL::LINES,
     LineStrip = GL::LINE_STRIP,
     LineLoop = GL::LINE_LOOP,
@@ -41,7 +40,7 @@ pub struct HelloTriangle {
     canvas: NodeRef,
     mode: Mode,
 
-    onclick_triangle: yew::Callback<web_sys::MouseEvent>,
+    onclick_triangles: yew::Callback<web_sys::MouseEvent>,
     onclick_lines: yew::Callback<web_sys::MouseEvent>,
     onclick_line_strip: yew::Callback<web_sys::MouseEvent>,
     onclick_line_loop: yew::Callback<web_sys::MouseEvent>,
@@ -111,16 +110,16 @@ impl yew::Component for HelloTriangle {
 
     fn create(ctx: &yew::Context<Self>) -> Self {
         let link = ctx.link();
-        let onclick_triangle = link.callback(|_| Message::ChangeMode(Mode::Triangle));
+        let onclick_triangles = link.callback(|_| Message::ChangeMode(Mode::Triangles));
         let onclick_lines = link.callback(|_| Message::ChangeMode(Mode::Lines));
         let onclick_line_strip = link.callback(|_| Message::ChangeMode(Mode::LineStrip));
         let onclick_line_loop = link.callback(|_| Message::ChangeMode(Mode::LineLoop));
         Self {
             gl: None,
             canvas: NodeRef::default(),
-            mode: Mode::Triangle,
+            mode: Mode::Triangles,
 
-            onclick_triangle,
+            onclick_triangles,
             onclick_lines,
             onclick_line_strip,
             onclick_line_loop,
@@ -150,9 +149,9 @@ impl yew::Component for HelloTriangle {
                 />
                 <p>
                     <button
-                        onclick={self.onclick_triangle.clone()}
-                        disabled={self.mode == Mode::Triangle}
-                    >{ "TRIANGLE" }</button>
+                        onclick={self.onclick_triangles.clone()}
+                        disabled={self.mode == Mode::Triangles}
+                    >{ "TRIANGLES" }</button>
                     <button
                         onclick={self.onclick_lines.clone()}
                         disabled={self.mode == Mode::Lines}

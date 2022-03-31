@@ -1,8 +1,10 @@
 mod ch02;
 mod ch03;
+mod ch04;
 
 use yew_router::{components::Redirect, Routable};
 
+#[allow(non_camel_case_types)]
 #[derive(Clone, PartialEq, Routable)]
 pub enum Page {
     #[at("/")]
@@ -25,6 +27,20 @@ pub enum Page {
     HelloTriangle,
     #[at("/ch03/hello_quad")]
     HelloQuad,
+    #[at("/ch03/translated_triangle")]
+    TranslatedTriangle,
+    #[at("/ch03/translated_triangle_matrix")]
+    TranslatedTriangle_Matrix,
+    #[at("/ch03/rotated_triangle")]
+    RotatedTriangle,
+    #[at("/ch03/rotated_triangle_matrix")]
+    RotatedTriangle_Matrix,
+    #[at("/ch03/scaled_triangle_matrix")]
+    ScaledTriangle_Matrix,
+    #[at("/ch04/rotated_triangle_matrix4")]
+    RotatedTriangle_Matrix4,
+    #[at("/ch04/rotated_translated_triangle")]
+    RotatedTranslatedTriangle,
 }
 
 pub fn render_page(page: &Page) -> yew::Html {
@@ -41,5 +57,13 @@ pub fn render_page(page: &Page) -> yew::Html {
         MultiPoint => yew::html! { <ch03::MultiPoint /> },
         HelloTriangle => yew::html! { <ch03::HelloTriangle /> },
         HelloQuad => yew::html! { <ch03::HelloQuad /> },
+        TranslatedTriangle => yew::html! { <ch03::TranslatedTriangle /> },
+        TranslatedTriangle_Matrix => yew::html! { <ch03::TranslatedTriangle_Matrix /> },
+        RotatedTriangle => yew::html! { <ch03::RotatedTriangle /> },
+        RotatedTriangle_Matrix => yew::html! { <ch03::RotatedTriangle_Matrix /> },
+        ScaledTriangle_Matrix => yew::html! { <ch03::ScaledTriangle_Matrix /> },
+
+        RotatedTriangle_Matrix4 => yew::html! { <ch04::RotatedTriangle_Matrix4 /> },
+        RotatedTranslatedTriangle => yew::html! { <ch04::RotatedTranslatedTriangle /> },
     }
 }
