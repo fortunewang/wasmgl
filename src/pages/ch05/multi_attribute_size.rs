@@ -4,9 +4,8 @@ use web_sys::{WebGl2RenderingContext as GL, WebGlProgram};
 
 use crate::utils::WebGl2RenderingContextExt;
 
-#[allow(non_camel_case_types)]
-#[yew::function_component(RotatedTriangle_Matrix)]
-pub fn rotated_triangle_matrix() -> yew::Html {
+#[yew::function_component(MultiAttributeSize)]
+pub fn multi_attribute_size() -> yew::Html {
     let canvas = yew::use_node_ref();
     crate::utils::use_webgl2_canvas_render(canvas.clone(), render);
 
@@ -17,9 +16,10 @@ pub fn rotated_triangle_matrix() -> yew::Html {
 
 const VSHADER_SOURCE: &str = "
 attribute vec4 a_Position;
-uniform mat4 u_xformMatrix;
+attribute float a_PointSize;
 void main() {
-    gl_Position = u_xformMatrix * a_Position;
+    gl_Position = a_Position;
+    gl_PointSize = a_PointSize;
 }
 ";
 
@@ -29,37 +29,20 @@ void main() {
 }
 ";
 
-// The number of vertices
 const N: i32 = 3;
 
 const VERTICES: &[f32] = &[0.0, 0.5, -0.5, -0.5, 0.5, -0.5];
 
-// The rotation angle
-const ANGLE: f32 = 90.0;
-// Convert to radians
-const RADIAN: f32 = std::f32::consts::PI * ANGLE / 180.0;
+const SIZES: &[f32] = &[10.0, 20.0, 30.0];
 
 fn render(gl: GL) -> Result<(), JsError> {
     let program = gl.init_shaders(VSHADER_SOURCE, FSHADER_SOURCE)?;
 
-    // Write the positions of vertices to a vertex shader
     init_vertex_buffers(&gl, &program)?;
+    init_size_buffers(&gl, &program)?;
 
-    // Create a rotation matrix
-    let cos_b = RADIAN.cos();
-    let sin_b = RADIAN.sin();
-
-    // Note: WebGL is column major order
-    let xform_matrix: &[f32] = &[
-        cos_b, sin_b, 0.0, 0.0, -sin_b, cos_b, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-    ];
-
-    // Pass the rotation matrix to the vertex shader
-    let u_xform_matrix = gl.get_uniform_location(&program, "u_xformMatrix");
-    if u_xform_matrix.is_none() {
-        return Err(JsError::new("Failed to get the storage location of u_xformMatrix").into());
-    }
-    gl.uniform_matrix4fv_with_f32_array(u_xform_matrix.as_ref(), false, xform_matrix);
+    // Unbind the buffer object
+    gl.bind_buffer(GL::ARRAY_BUFFER, None);
 
     // Specify the color for clearing <canvas>
     gl.clear_color(0.0, 0.0, 0.0, 1.0);
@@ -68,7 +51,7 @@ fn render(gl: GL) -> Result<(), JsError> {
     gl.clear(GL::COLOR_BUFFER_BIT);
 
     // Draw
-    gl.draw_arrays(GL::TRIANGLES, 0, N);
+    gl.draw_arrays(GL::POINTS, 0, N);
     Ok(())
 }
 
@@ -90,6 +73,28 @@ fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
 
     gl.vertex_attrib_pointer_with_i32(a_position as u32, 2, GL::FLOAT, false, 0, 0);
     gl.enable_vertex_attrib_array(a_position as u32);
+
+    Ok(())
+}
+
+fn init_size_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
+    let sizes = Float32Array::from(SIZES);
+    let size_buffer = gl.create_buffer();
+    if size_buffer.is_none() {
+        return Err(JsError::new("Failed to create the buffer object"));
+    }
+    gl.bind_buffer(GL::ARRAY_BUFFER, size_buffer.as_ref());
+    gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &sizes, GL::STATIC_DRAW);
+
+    let a_point_size = gl.get_attrib_location(program, "a_PointSize");
+    if a_point_size < 0 {
+        return Err(JsError::new(
+            "Failed to get the storage location of a_PointSize",
+        ));
+    }
+
+    gl.vertex_attrib_pointer_with_i32(a_point_size as u32, 1, GL::FLOAT, false, 0, 0);
+    gl.enable_vertex_attrib_array(a_point_size as u32);
 
     Ok(())
 }

@@ -7,43 +7,56 @@ use crate::utils::WebGl2RenderingContextExt;
 
 const VSHADER_SOURCE: &str = "
 attribute vec4 a_Position;
+attribute vec4 a_Color;
+varying vec4 v_Color;
 void main() {
     gl_Position = a_Position;
+    gl_PointSize = 10.0;
+    v_Color = a_Color;
 }
 ";
 
 const FSHADER_SOURCE: &str = "
+precision mediump float;
+varying vec4 v_Color;
 void main() {
-  gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+  gl_FragColor = v_Color;
 }
 ";
 
 // The number of vertices
-const N: i32 = 4;
+const N: i32 = 3;
 
-const VERTICES: &[f32] = &[-0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5, -0.5];
+// Vertex coordinates and color
+const VERTICES_COLORS: &[f32] = &[
+    0.0, 0.5, 1.0, 0.0, 0.0, // the 1st point
+    -0.5, -0.5, 0.0, 1.0, 0.0, // the 2nd point
+    0.5, -0.5, 0.0, 0.0, 1.0, // the 3rd point
+];
+
+const FSIZE: i32 = std::mem::size_of::<f32>() as i32;
 
 #[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
-    TriangleStrip = GL::TRIANGLE_STRIP,
-    TriangleFan = GL::TRIANGLE_FAN,
+    Points = GL::POINTS,
+    Triangles = GL::TRIANGLES,
 }
 
 pub enum Message {
     ChangeMode(Mode),
 }
 
-pub struct HelloQuad {
+pub struct ColoredTriangle {
     gl: Option<GL>,
     canvas: NodeRef,
     mode: Mode,
 
-    onclick_triangle_strip: yew::Callback<web_sys::MouseEvent>,
-    onclick_triangle_fan: yew::Callback<web_sys::MouseEvent>,
+    onclick_points: yew::Callback<web_sys::MouseEvent>,
+    onclick_triangles: yew::Callback<web_sys::MouseEvent>,
 }
 
-impl HelloQuad {
+impl ColoredTriangle {
     fn get_canvas(&self) -> Option<HtmlCanvasElement> {
         self.canvas.cast::<HtmlCanvasElement>()
     }
@@ -62,6 +75,9 @@ impl HelloQuad {
 
         init_vertex_buffers(&gl, &program)?;
 
+        // Unbind the buffer object
+        gl.bind_buffer(GL::ARRAY_BUFFER, None);
+
         // Specify the color for clearing <canvas>
         gl.clear_color(0.0, 0.0, 0.0, 1.0);
 
@@ -75,26 +91,26 @@ impl HelloQuad {
         // Clear <canvas>
         gl.clear(GL::COLOR_BUFFER_BIT);
 
-        // Draw the rectangle
+        // Draw
         gl.draw_arrays(self.mode as u32, 0, N);
     }
 }
 
-impl yew::Component for HelloQuad {
+impl yew::Component for ColoredTriangle {
     type Message = Message;
     type Properties = ();
 
     fn create(ctx: &yew::Context<Self>) -> Self {
         let link = ctx.link();
-        let onclick_triangle_strip = link.callback(|_| Message::ChangeMode(Mode::TriangleStrip));
-        let onclick_triangle_fan = link.callback(|_| Message::ChangeMode(Mode::TriangleFan));
+        let onclick_points = link.callback(|_| Message::ChangeMode(Mode::Points));
+        let onclick_triangles = link.callback(|_| Message::ChangeMode(Mode::Triangles));
         Self {
             gl: None,
             canvas: NodeRef::default(),
-            mode: Mode::TriangleStrip,
+            mode: Mode::Points,
 
-            onclick_triangle_strip,
-            onclick_triangle_fan,
+            onclick_points,
+            onclick_triangles,
         }
     }
 
@@ -120,13 +136,13 @@ impl yew::Component for HelloQuad {
                 />
                 <p>
                     <button
-                        onclick={self.onclick_triangle_strip.clone()}
-                        disabled={self.mode == Mode::TriangleStrip}
-                    >{ "TRIANGLE_STRIP" }</button>
+                        onclick={self.onclick_points.clone()}
+                        disabled={self.mode == Mode::Points}
+                    >{ "POINTS" }</button>
                     <button
-                        onclick={self.onclick_triangle_fan.clone()}
-                        disabled={self.mode == Mode::TriangleFan}
-                    >{ "TRIANGLE_FAN" }</button>
+                        onclick={self.onclick_triangles.clone()}
+                        disabled={self.mode == Mode::Triangles}
+                    >{ "TRIANGLES" }</button>
                 </p>
             </div>
         }
@@ -140,13 +156,13 @@ impl yew::Component for HelloQuad {
 }
 
 fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
-    let vertices = Float32Array::from(VERTICES);
+    let vertices_colors = Float32Array::from(VERTICES_COLORS);
     let vertex_buffer = gl.create_buffer();
     if vertex_buffer.is_none() {
         return Err(JsError::new("Failed to create the buffer object"));
     }
     gl.bind_buffer(GL::ARRAY_BUFFER, vertex_buffer.as_ref());
-    gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &vertices, GL::STATIC_DRAW);
+    gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &vertices_colors, GL::STATIC_DRAW);
 
     let a_position = gl.get_attrib_location(program, "a_Position");
     if a_position < 0 {
@@ -155,8 +171,18 @@ fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
         ));
     }
 
-    gl.vertex_attrib_pointer_with_i32(a_position as u32, 2, GL::FLOAT, false, 0, 0);
+    gl.vertex_attrib_pointer_with_i32(a_position as u32, 2, GL::FLOAT, false, FSIZE * 5, 0);
     gl.enable_vertex_attrib_array(a_position as u32);
+
+    let a_color = gl.get_attrib_location(program, "a_Color");
+    if a_color < 0 {
+        return Err(JsError::new(
+            "Failed to get the storage location of a_Color",
+        ));
+    }
+
+    gl.vertex_attrib_pointer_with_i32(a_color as u32, 3, GL::FLOAT, false, FSIZE * 5, FSIZE * 2);
+    gl.enable_vertex_attrib_array(a_color as u32);
 
     Ok(())
 }

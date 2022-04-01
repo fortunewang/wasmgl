@@ -25,6 +25,13 @@ pub fn sidemenu() -> Html {
 
             <li><Link<Page> to={Page::RotatedTriangle_Matrix4}>{ "RotatedTriangle_Matrix4" }</Link<Page>></li>
             <li><Link<Page> to={Page::RotatedTranslatedTriangle}>{ "RotatedTranslatedTriangle" }</Link<Page>></li>
+            <li><Link<Page> to={Page::RotatingTriangle}>{ "RotatingTriangle" }</Link<Page>></li>
+            <li><Link<Page> to={Page::RotatingTranslatedTriangle}>{ "RotatingTranslatedTriangle" }</Link<Page>></li>
+
+            <li><Link<Page> to={Page::MultiAttributeSize}>{ "MultiAttributeSize" }</Link<Page>></li>
+            <li><Link<Page> to={Page::MultiAttributeSize_Interleaved}>{ "MultiAttributeSize_Interleaved" }</Link<Page>></li>
+            <li><Link<Page> to={Page::ColoredTriangle}>{ "ColoredTriangle" }</Link<Page>></li>
+            <li><Link<Page> to={Page::TexturedQuad}>{ "TexturedQuad" }</Link<Page>></li>
         </ul>
         </div>
     }

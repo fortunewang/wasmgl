@@ -2,6 +2,8 @@ use js_sys::Float32Array;
 use wasm_bindgen::JsError;
 use web_sys::{WebGl2RenderingContext as GL, WebGlProgram};
 
+use crate::utils::WebGl2RenderingContextExt;
+
 #[yew::function_component(MultiPoint)]
 pub fn multi_point() -> yew::Html {
     let canvas = yew::use_node_ref();
@@ -32,10 +34,7 @@ const N: i32 = 3;
 const VERTICES: &[f32] = &[0.0, 0.5, -0.5, -0.5, 0.5, -0.5];
 
 fn render(gl: GL) -> Result<(), JsError> {
-    let vert_shader = crate::utils::compile_shader(&gl, GL::VERTEX_SHADER, VSHADER_SOURCE)?;
-    let frag_shader = crate::utils::compile_shader(&gl, GL::FRAGMENT_SHADER, FSHADER_SOURCE)?;
-    let program = crate::utils::link_program(&gl, &vert_shader, &frag_shader)?;
-    gl.use_program(Some(&program));
+    let program = gl.init_shaders(VSHADER_SOURCE, FSHADER_SOURCE)?;
 
     // Write the positions of vertices to a vertex shader
     init_vertex_buffers(&gl, &program)?;
@@ -58,11 +57,7 @@ fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
         return Err(JsError::new("Failed to create the buffer object"));
     }
     gl.bind_buffer(GL::ARRAY_BUFFER, vertex_buffer.as_ref());
-    gl.buffer_data_with_opt_array_buffer(
-        GL::ARRAY_BUFFER,
-        Some(&vertices.buffer()),
-        GL::STATIC_DRAW,
-    );
+    gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &vertices, GL::STATIC_DRAW);
 
     let a_position = gl.get_attrib_location(program, "a_Position");
     if a_position < 0 {

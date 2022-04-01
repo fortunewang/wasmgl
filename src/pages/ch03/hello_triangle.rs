@@ -1,7 +1,9 @@
 use js_sys::Float32Array;
-use wasm_bindgen::{JsCast, JsError, JsValue};
-use web_sys::{HtmlCanvasElement, WebGl2RenderingContext as GL};
+use wasm_bindgen::{JsCast, JsError, JsValue, UnwrapThrowExt};
+use web_sys::{HtmlCanvasElement, WebGl2RenderingContext as GL, WebGlProgram};
 use yew::NodeRef;
+
+use crate::utils::WebGl2RenderingContextExt;
 
 const VSHADER_SOURCE: &str = "
 attribute vec4 a_Position;
@@ -31,7 +33,6 @@ pub enum Mode {
 }
 
 pub enum Message {
-    SetupGL,
     ChangeMode(Mode),
 }
 
@@ -51,40 +52,19 @@ impl HelloTriangle {
         self.canvas.cast::<HtmlCanvasElement>()
     }
 
-    fn setup_gl(&mut self) -> Result<bool, JsValue> {
+    fn setup_gl(&mut self) -> Result<(), JsValue> {
         let canvas = self.get_canvas().unwrap();
 
         let gl = canvas
             .get_context("webgl2")
-            .unwrap()
+            .unwrap_throw()
             .unwrap()
             .dyn_into::<GL>()
             .unwrap();
 
-        let vert_shader = crate::utils::compile_shader(&gl, GL::VERTEX_SHADER, VSHADER_SOURCE)?;
-        let frag_shader = crate::utils::compile_shader(&gl, GL::FRAGMENT_SHADER, FSHADER_SOURCE)?;
-        let program = crate::utils::link_program(&gl, &vert_shader, &frag_shader)?;
-        gl.use_program(Some(&program));
+        let program = gl.init_shaders(VSHADER_SOURCE, FSHADER_SOURCE)?;
 
-        let vertices = Float32Array::from(VERTICES);
-        let vertex_buffer = gl.create_buffer();
-        if vertex_buffer.is_none() {
-            return Err(JsError::new("Failed to create the buffer object").into());
-        }
-        gl.bind_buffer(GL::ARRAY_BUFFER, vertex_buffer.as_ref());
-        gl.buffer_data_with_opt_array_buffer(
-            GL::ARRAY_BUFFER,
-            Some(&vertices.buffer()),
-            GL::STATIC_DRAW,
-        );
-
-        let a_position = gl.get_attrib_location(&program, "a_Position");
-        if a_position < 0 {
-            return Err(JsError::new("Failed to get the storage location of a_Position").into());
-        }
-
-        gl.vertex_attrib_pointer_with_i32(a_position as u32, 2, GL::FLOAT, false, 0, 0);
-        gl.enable_vertex_attrib_array(a_position as u32);
+        init_vertex_buffers(&gl, &program)?;
 
         // Specify the color for clearing <canvas>
         gl.clear_color(0.0, 0.0, 0.0, 1.0);
@@ -92,7 +72,7 @@ impl HelloTriangle {
         self.rerender_triangle(&gl);
 
         self.gl = Some(gl);
-        Ok(true)
+        Ok(())
     }
 
     fn rerender_triangle(&self, gl: &GL) {
@@ -128,7 +108,6 @@ impl yew::Component for HelloTriangle {
 
     fn update(&mut self, _ctx: &yew::Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Message::SetupGL => self.setup_gl().unwrap(),
             Message::ChangeMode(mode) => {
                 self.mode = mode;
                 if let Some(gl) = self.gl.as_ref() {
@@ -169,9 +148,31 @@ impl yew::Component for HelloTriangle {
         }
     }
 
-    fn rendered(&mut self, ctx: &yew::Context<Self>, first_render: bool) {
+    fn rendered(&mut self, _ctx: &yew::Context<Self>, first_render: bool) {
         if first_render {
-            ctx.link().send_message(Message::SetupGL);
+            self.setup_gl().unwrap_throw()
         }
     }
+}
+
+fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
+    let vertices = Float32Array::from(VERTICES);
+    let vertex_buffer = gl.create_buffer();
+    if vertex_buffer.is_none() {
+        return Err(JsError::new("Failed to create the buffer object"));
+    }
+    gl.bind_buffer(GL::ARRAY_BUFFER, vertex_buffer.as_ref());
+    gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &vertices, GL::STATIC_DRAW);
+
+    let a_position = gl.get_attrib_location(program, "a_Position");
+    if a_position < 0 {
+        return Err(JsError::new(
+            "Failed to get the storage location of a_Position",
+        ));
+    }
+
+    gl.vertex_attrib_pointer_with_i32(a_position as u32, 2, GL::FLOAT, false, 0, 0);
+    gl.enable_vertex_attrib_array(a_position as u32);
+
+    Ok(())
 }

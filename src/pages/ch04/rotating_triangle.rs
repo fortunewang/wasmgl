@@ -1,3 +1,4 @@
+use gloo::render::{request_animation_frame, AnimationFrame};
 use js_sys::Float32Array;
 use nalgebra as na;
 use wasm_bindgen::{JsCast, JsError, JsValue, UnwrapThrowExt};
@@ -25,41 +26,32 @@ void main() {
 // The number of vertices
 const N: i32 = 3;
 
-const VERTICES: &[f32] = &[0.0, 0.3, -0.3, -0.3, 0.3, -0.3];
+const VERTICES: &[f32] = &[0.0, 0.5, -0.5, -0.5, 0.5, -0.5];
 
-// The rotation angle
-const ANGLE: f32 = 60.0;
+// Rotation angle (degrees/second)
+const ANGLE_STEP: f32 = 45.0;
 // Convert to radians
-const RADIAN: f32 = std::f32::consts::PI * ANGLE / 180.0;
-// Translation distance
-const TX: f32 = 0.5;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Mode {
-    RotatedTranslated,
-    TranslatedRotated,
-}
+const RADIAN_STEP: f32 = std::f32::consts::PI * ANGLE_STEP / 180.0;
 
 pub enum Message {
-    ChangeMode(Mode),
+    Animate(f64),
 }
 
-pub struct RotatedTranslatedTriangle {
+pub struct RotatingTriangle {
     gl: Option<GL>,
     canvas: NodeRef,
-    mode: Mode,
+    tick: Option<AnimationFrame>,
     u_model_matrix: Option<WebGlUniformLocation>,
-
-    onclick_rotated_translated: yew::Callback<web_sys::MouseEvent>,
-    onclick_translated_rotated: yew::Callback<web_sys::MouseEvent>,
+    last_radian: f32,
+    last_render: Option<f64>,
 }
 
-impl RotatedTranslatedTriangle {
+impl RotatingTriangle {
     fn get_canvas(&self) -> Option<HtmlCanvasElement> {
         self.canvas.cast::<HtmlCanvasElement>()
     }
 
-    fn setup_gl(&mut self) -> Result<(), JsValue> {
+    fn setup_gl(&mut self, link: yew::html::Scope<Self>) -> Result<(), JsValue> {
         let canvas = self.get_canvas().unwrap();
 
         let gl = canvas
@@ -71,8 +63,10 @@ impl RotatedTranslatedTriangle {
 
         let program = gl.init_shaders(VSHADER_SOURCE, FSHADER_SOURCE)?;
 
+        // Write the positions of vertices to a vertex shader
         init_vertex_buffers(&gl, &program)?;
 
+        // Pass the rotation matrix to the vertex shader
         let u_model_matrix = gl.get_uniform_location(&program, "u_ModelMatrix");
         if u_model_matrix.is_none() {
             return Err(JsError::new("Failed to get the storage location of u_ModelMatrix").into());
@@ -82,62 +76,71 @@ impl RotatedTranslatedTriangle {
         gl.clear_color(0.0, 0.0, 0.0, 1.0);
 
         self.u_model_matrix = u_model_matrix;
-        self.rerender_triangle(&gl);
         self.gl = Some(gl);
+        self.reset_tick(link);
+
         Ok(())
     }
 
-    fn rerender_triangle(&self, gl: &GL) {
-        let rotation = na::Matrix4::new_rotation(na::Vector3::new(0.0, 0.0, RADIAN));
-        let translation = na::Matrix4::new_translation(&na::Vector3::new(TX, 0.0, 0.0));
-        let model_matrix = match self.mode {
-            Mode::RotatedTranslated => rotation * translation,
-            Mode::TranslatedRotated => translation * rotation,
-        };
-        // Pass the rotation matrix to the vertex shader
-        gl.uniform_matrix4fv_with_f32_array(
-            self.u_model_matrix.as_ref(),
-            false,
-            model_matrix.as_slice(),
-        );
+    fn reset_tick(&mut self, link: yew::html::Scope<Self>) {
+        // A reference to the new handle must be retained for the next render to run.
+        self.tick = Some(request_animation_frame(move |now| {
+            link.send_message(Message::Animate(now))
+        }));
+    }
 
-        // Clear <canvas>
-        gl.clear(GL::COLOR_BUFFER_BIT);
+    fn animate(&mut self, link: yew::html::Scope<Self>, now: f64) {
+        if let Some(gl) = self.gl.as_ref() {
+            let elapsed = self
+                .last_render
+                .map(|last_render| now - last_render)
+                .unwrap_or(0.0);
+            self.last_render = Some(now);
 
-        // Draw
-        gl.draw_arrays(GL::TRIANGLES, 0, N);
+            let radian = self.last_radian + (RADIAN_STEP * elapsed as f32) / 1000.0;
+            self.last_radian = radian % std::f32::consts::TAU;
+
+            let model_matrix =
+                na::Matrix4::new_rotation(na::Vector3::new(0.0, 0.0, self.last_radian));
+            gl.uniform_matrix4fv_with_f32_array(
+                self.u_model_matrix.as_ref(),
+                false,
+                model_matrix.as_slice(),
+            );
+
+            // Clear <canvas>
+            gl.clear(GL::COLOR_BUFFER_BIT);
+
+            // Draw
+            gl.draw_arrays(GL::TRIANGLES, 0, N);
+
+            self.reset_tick(link);
+        } else {
+            self.tick = None;
+        }
     }
 }
 
-impl yew::Component for RotatedTranslatedTriangle {
+impl yew::Component for RotatingTriangle {
     type Message = Message;
     type Properties = ();
 
-    fn create(ctx: &yew::Context<Self>) -> Self {
-        let link = ctx.link();
-        let onclick_rotated_translated =
-            link.callback(|_| Message::ChangeMode(Mode::RotatedTranslated));
-        let onclick_translated_rotated =
-            link.callback(|_| Message::ChangeMode(Mode::TranslatedRotated));
+    fn create(_ctx: &yew::Context<Self>) -> Self {
         Self {
             gl: None,
             canvas: NodeRef::default(),
-            mode: Mode::RotatedTranslated,
+            tick: None,
             u_model_matrix: None,
-
-            onclick_rotated_translated,
-            onclick_translated_rotated,
+            last_radian: 0.0,
+            last_render: None,
         }
     }
 
-    fn update(&mut self, _ctx: &yew::Context<Self>, msg: Self::Message) -> bool {
+    fn update(&mut self, ctx: &yew::Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Message::ChangeMode(mode) => {
-                self.mode = mode;
-                if let Some(gl) = self.gl.as_ref() {
-                    self.rerender_triangle(gl);
-                }
-                true
+            Message::Animate(now) => {
+                self.animate(ctx.link().clone(), now);
+                false
             }
         }
     }
@@ -150,23 +153,13 @@ impl yew::Component for RotatedTranslatedTriangle {
                     width="400"
                     height="400"
                 />
-                <p>
-                    <button
-                        onclick={self.onclick_rotated_translated.clone()}
-                        disabled={self.mode == Mode::RotatedTranslated}
-                    >{ "rotation -> translation" }</button>
-                    <button
-                        onclick={self.onclick_translated_rotated.clone()}
-                        disabled={self.mode == Mode::TranslatedRotated}
-                    >{ "translation -> rotation" }</button>
-                </p>
             </div>
         }
     }
 
-    fn rendered(&mut self, _ctx: &yew::Context<Self>, first_render: bool) {
+    fn rendered(&mut self, ctx: &yew::Context<Self>, first_render: bool) {
         if first_render {
-            self.setup_gl().unwrap_throw();
+            self.setup_gl(ctx.link().clone()).unwrap_throw();
         }
     }
 }

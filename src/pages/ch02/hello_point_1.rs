@@ -1,6 +1,8 @@
 use wasm_bindgen::JsError;
 use web_sys::WebGl2RenderingContext as GL;
 
+use crate::utils::WebGl2RenderingContextExt;
+
 #[yew::function_component(HelloPoint1)]
 pub fn hello_point_1() -> yew::Html {
     let canvas = yew::use_node_ref();
@@ -25,10 +27,7 @@ void main() {
 ";
 
 fn render(gl: GL) -> Result<(), JsError> {
-    let vert_shader = crate::utils::compile_shader(&gl, GL::VERTEX_SHADER, VSHADER_SOURCE)?;
-    let frag_shader = crate::utils::compile_shader(&gl, GL::FRAGMENT_SHADER, FSHADER_SOURCE)?;
-    let program = crate::utils::link_program(&gl, &vert_shader, &frag_shader)?;
-    gl.use_program(Some(&program));
+    let _program = gl.init_shaders(VSHADER_SOURCE, FSHADER_SOURCE)?;
 
     // Specify the color for clearing <canvas>
     gl.clear_color(0.0, 0.0, 0.0, 1.0);

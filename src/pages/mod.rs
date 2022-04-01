@@ -1,6 +1,7 @@
 mod ch02;
 mod ch03;
 mod ch04;
+mod ch05;
 
 use yew_router::{components::Redirect, Routable};
 
@@ -41,6 +42,18 @@ pub enum Page {
     RotatedTriangle_Matrix4,
     #[at("/ch04/rotated_translated_triangle")]
     RotatedTranslatedTriangle,
+    #[at("/ch04/rotating_triangle")]
+    RotatingTriangle,
+    #[at("/ch04/rotating_translated_triangle")]
+    RotatingTranslatedTriangle,
+    #[at("/ch05/multi_attribute_size")]
+    MultiAttributeSize,
+    #[at("/ch05/multi_attribute_size_interleaved")]
+    MultiAttributeSize_Interleaved,
+    #[at("/ch05/colored_triangle")]
+    ColoredTriangle,
+    #[at("/ch05/textured_quad")]
+    TexturedQuad,
 }
 
 pub fn render_page(page: &Page) -> yew::Html {
@@ -65,5 +78,12 @@ pub fn render_page(page: &Page) -> yew::Html {
 
         RotatedTriangle_Matrix4 => yew::html! { <ch04::RotatedTriangle_Matrix4 /> },
         RotatedTranslatedTriangle => yew::html! { <ch04::RotatedTranslatedTriangle /> },
+        RotatingTriangle => yew::html! { <ch04::RotatingTriangle /> },
+        RotatingTranslatedTriangle => yew::html! { <ch04::RotatingTranslatedTriangle /> },
+
+        MultiAttributeSize => yew::html! { <ch05::MultiAttributeSize /> },
+        MultiAttributeSize_Interleaved => yew::html! { <ch05::MultiAttributeSize_Interleaved /> },
+        ColoredTriangle => yew::html! { <ch05::ColoredTriangle /> },
+        TexturedQuad => yew::html! { <ch05::TexturedQuad /> },
     }
 }

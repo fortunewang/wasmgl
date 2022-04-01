@@ -1,6 +1,8 @@
-use wasm_bindgen::{JsCast, JsError, JsValue};
+use wasm_bindgen::{JsCast, JsError, JsValue, UnwrapThrowExt};
 use web_sys::{Event, HtmlCanvasElement, MouseEvent, WebGl2RenderingContext as GL};
 use yew::NodeRef;
+
+use crate::utils::WebGl2RenderingContextExt;
 
 const VSHADER_SOURCE: &str = "
 attribute vec4 a_Position;
@@ -17,7 +19,6 @@ void main() {
 ";
 
 pub enum Message {
-    SetupGL,
     Click(f32, f32),
 }
 
@@ -46,20 +47,17 @@ impl ClickedPoints {
         self.canvas.cast::<HtmlCanvasElement>()
     }
 
-    fn setup_gl(&mut self) -> Result<bool, JsValue> {
+    fn setup_gl(&mut self) -> Result<(), JsValue> {
         let canvas = self.get_canvas().unwrap();
 
         let gl = canvas
             .get_context("webgl2")
-            .unwrap()
+            .unwrap_throw()
             .unwrap()
             .dyn_into::<GL>()
             .unwrap();
 
-        let vert_shader = crate::utils::compile_shader(&gl, GL::VERTEX_SHADER, VSHADER_SOURCE)?;
-        let frag_shader = crate::utils::compile_shader(&gl, GL::FRAGMENT_SHADER, FSHADER_SOURCE)?;
-        let program = crate::utils::link_program(&gl, &vert_shader, &frag_shader)?;
-        gl.use_program(Some(&program));
+        let program = gl.init_shaders(VSHADER_SOURCE, FSHADER_SOURCE)?;
 
         // Get the storage location of a_Position
         let a_position = gl.get_attrib_location(&program, "a_Position");
@@ -75,7 +73,7 @@ impl ClickedPoints {
 
         self.gl = Some(gl);
         self.a_position = a_position;
-        Ok(true)
+        Ok(())
     }
 
     fn on_click(&mut self, x: f32, y: f32) -> bool {
@@ -119,7 +117,6 @@ impl yew::Component for ClickedPoints {
 
     fn update(&mut self, _ctx: &yew::Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Message::SetupGL => self.setup_gl().unwrap(),
             Message::Click(x, y) => self.on_click(x, y),
         }
     }
@@ -136,9 +133,9 @@ impl yew::Component for ClickedPoints {
         }
     }
 
-    fn rendered(&mut self, ctx: &yew::Context<Self>, first_render: bool) {
+    fn rendered(&mut self, _ctx: &yew::Context<Self>, first_render: bool) {
         if first_render {
-            ctx.link().send_message(Message::SetupGL);
+            self.setup_gl().unwrap_throw();
         }
     }
 }
