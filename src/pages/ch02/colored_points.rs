@@ -6,19 +6,6 @@ use yew::NodeRef;
 
 use crate::utils::WebGl2RenderingContextExt;
 
-fn color_of_point(x: f32, y: f32) -> (f32, f32, f32, f32) {
-    if x >= 0.0 && y >= 0.0 {
-        // First quadrant
-        (1.0, 0.0, 0.0, 1.0) // Red
-    } else if x < 0.0 && y < 0.0 {
-        // Third quadrant
-        (0.0, 1.0, 0.0, 1.0) // Green
-    } else {
-        // Others
-        (1.0, 1.0, 1.0, 1.0) // White
-    }
-}
-
 const VSHADER_SOURCE: &str = "#
 attribute vec4 a_Position;
 void main() {
@@ -39,20 +26,7 @@ pub enum Message {
     Click(f32, f32),
 }
 
-fn on_click(ev: MouseEvent) -> Message {
-    let x = ev.client_x() as f32;
-    let y = ev.client_y() as f32;
-    let rect = AsRef::<Event>::as_ref(&ev)
-        .target()
-        .unwrap()
-        .dyn_into::<web_sys::Element>()
-        .unwrap()
-        .get_bounding_client_rect();
-
-    Message::Click(x - rect.left() as f32, y - rect.top() as f32)
-}
-
-pub struct ColoredPoints {
+pub struct Page {
     gl: Option<GL>,
     canvas: NodeRef,
     a_position: i32,
@@ -60,7 +34,7 @@ pub struct ColoredPoints {
     points: Vec<(f32, f32)>,
 }
 
-impl ColoredPoints {
+impl Page {
     fn get_canvas(&self) -> Option<HtmlCanvasElement> {
         self.canvas.cast::<HtmlCanvasElement>()
     }
@@ -129,7 +103,7 @@ impl ColoredPoints {
     }
 }
 
-impl yew::Component for ColoredPoints {
+impl yew::Component for Page {
     type Message = Message;
     type Properties = ();
 
@@ -165,5 +139,31 @@ impl yew::Component for ColoredPoints {
         if first_render {
             self.setup_gl().unwrap_throw();
         }
+    }
+}
+
+fn on_click(ev: MouseEvent) -> Message {
+    let x = ev.client_x() as f32;
+    let y = ev.client_y() as f32;
+    let rect = AsRef::<Event>::as_ref(&ev)
+        .target()
+        .unwrap()
+        .dyn_into::<web_sys::Element>()
+        .unwrap()
+        .get_bounding_client_rect();
+
+    Message::Click(x - rect.left() as f32, y - rect.top() as f32)
+}
+
+fn color_of_point(x: f32, y: f32) -> (f32, f32, f32, f32) {
+    if x >= 0.0 && y >= 0.0 {
+        // First quadrant
+        (1.0, 0.0, 0.0, 1.0) // Red
+    } else if x < 0.0 && y < 0.0 {
+        // Third quadrant
+        (0.0, 1.0, 0.0, 1.0) // Green
+    } else {
+        // Others
+        (1.0, 1.0, 1.0, 1.0) // White
     }
 }

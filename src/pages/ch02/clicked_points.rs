@@ -35,14 +35,14 @@ fn on_click(ev: MouseEvent) -> Message {
     Message::Click(x - rect.left() as f32, y - rect.top() as f32)
 }
 
-pub struct ClickedPoints {
+pub struct Page {
     gl: Option<GL>,
     canvas: NodeRef,
     a_position: i32,
     points: Vec<(f32, f32)>,
 }
 
-impl ClickedPoints {
+impl Page {
     fn get_canvas(&self) -> Option<HtmlCanvasElement> {
         self.canvas.cast::<HtmlCanvasElement>()
     }
@@ -102,7 +102,7 @@ impl ClickedPoints {
     }
 }
 
-impl yew::Component for ClickedPoints {
+impl yew::Component for Page {
     type Message = Message;
     type Properties = ();
 

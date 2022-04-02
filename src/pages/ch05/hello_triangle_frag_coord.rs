@@ -16,42 +16,31 @@ pub fn page() -> yew::Html {
 
 const VSHADER_SOURCE: &str = "
 attribute vec4 a_Position;
-uniform vec4 u_Translation;
 void main() {
-    gl_Position = a_Position + u_Translation;
+    gl_Position = a_Position;
 }
 ";
 
 const FSHADER_SOURCE: &str = "
+precision mediump float;
+uniform float u_Width;
+uniform float u_Height;
 void main() {
-  gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    gl_FragColor = vec4(gl_FragCoord.x/u_Width, 0.0, gl_FragCoord.y/u_Height, 1.0);
 }
 ";
 
-// The number of vertices
 const N: i32 = 3;
 
 const VERTICES: &[f32] = &[0.0, 0.5, -0.5, -0.5, 0.5, -0.5];
 
-// The translation distance for x, y, and z direction
-const TX: f32 = 0.5;
-const TY: f32 = 0.5;
-const TZ: f32 = 0.0;
-
 fn render(gl: GL) -> Result<(), JsError> {
     let program = gl.init_shaders(VSHADER_SOURCE, FSHADER_SOURCE)?;
 
-    // Write the positions of vertices to a vertex shader
     init_vertex_buffers(&gl, &program)?;
 
-    // Pass the translation distance to the vertex shader
-    let u_translation = gl.get_uniform_location(&program, "u_Translation");
-    if u_translation.is_none() {
-        return Err(JsError::new(
-            "Failed to get the storage location of u_Translation",
-        ));
-    }
-    gl.uniform4f(u_translation.as_ref(), TX, TY, TZ, 0.0);
+    // Unbind the buffer object
+    gl.bind_buffer(GL::ARRAY_BUFFER, None);
 
     // Specify the color for clearing <canvas>
     gl.clear_color(0.0, 0.0, 0.0, 1.0);
@@ -82,7 +71,23 @@ fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
         ));
     }
 
+    let u_width = gl.get_uniform_location(program, "u_Width");
+    if u_width.is_none() {
+        return Err(JsError::new(
+            "Failed to get the storage location of u_Width",
+        ));
+    }
+
+    let u_height = gl.get_uniform_location(program, "u_Height");
+    if u_height.is_none() {
+        return Err(JsError::new(
+            "Failed to get the storage location of u_Height",
+        ));
+    }
+
     gl.vertex_attrib_pointer_with_i32(a_position as u32, 2, GL::FLOAT, false, 0, 0);
+    gl.uniform1f(u_width.as_ref(), gl.drawing_buffer_width() as f32);
+    gl.uniform1f(u_height.as_ref(), gl.drawing_buffer_height() as f32);
     gl.enable_vertex_attrib_array(a_position as u32);
 
     Ok(())

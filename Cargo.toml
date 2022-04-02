@@ -6,31 +6,29 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+gloo = "0.6.1"
+js-sys = "0.3.56"
+log = "0.4.16"
+nalgebra = "0.30.1"
+reqwasm = "0.5.0"
 wasm-bindgen = "0.2.79"
+wasm-bindgen-futures = "0.4.29"
+wasm-logger = "0.2.0"
 wee_alloc = "0.4.5"
 yew = "0.19.3"
 yew-router = "0.16.0"
-wasm-logger = "0.2.0"
-log = "0.4.16"
-js-sys = "0.3.56"
-nalgebra = "0.30.1"
-gloo = "0.6.1"
-reqwasm = "0.5.0"
-wasm-bindgen-futures = "0.4.29"
 
 [dependencies.web-sys]
 version = "0.3.56"
 features = [
+  "CanvasRenderingContext2d",
   "DomRect",
   "HtmlCanvasElement",
-  "CanvasRenderingContext2d",
+  "HtmlImageElement",
   "WebGl2RenderingContext",
+  "WebGlBuffer",
   "WebGlProgram",
   "WebGlShader",
-  "WebGlUniformLocation",
-  "WebGlBuffer",
   "WebGlTexture",
-  "ImageData",
-  "ImageBitmap",
-  "Window",
+  "WebGlUniformLocation",
 ]

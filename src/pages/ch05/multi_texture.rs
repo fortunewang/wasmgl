@@ -20,10 +20,13 @@ void main() {
 
 const FSHADER_SOURCE: &str = "
 precision mediump float;
-uniform sampler2D u_Sampler;
+uniform sampler2D u_Sampler0;
+uniform sampler2D u_Sampler1;
 varying vec2 v_TexCoord;
 void main() {
-  gl_FragColor = texture2D(u_Sampler, v_TexCoord);
+  vec4 color0 = texture2D(u_Sampler0, v_TexCoord);
+  vec4 color1 = texture2D(u_Sampler1, v_TexCoord);
+  gl_FragColor = color0 * color1;
 }
 ";
 
@@ -41,14 +44,19 @@ const VERTICES_COLORS: &[f32] = &[
 const FSIZE: i32 = std::mem::size_of::<f32>() as i32;
 
 pub enum Message {
-    TextureLoaded(HtmlImageElement),
+    Texture0Loaded(HtmlImageElement),
+    Texture1Loaded(HtmlImageElement),
 }
 
 pub struct Page {
     gl: Option<GL>,
     canvas: NodeRef,
-    texture: Option<WebGlTexture>,
-    u_sampler: Option<WebGlUniformLocation>,
+    texture0: Option<WebGlTexture>,
+    texture1: Option<WebGlTexture>,
+    texture0_actived: bool,
+    texture1_actived: bool,
+    u_sampler0: Option<WebGlUniformLocation>,
+    u_sampler1: Option<WebGlUniformLocation>,
 }
 
 impl Page {
@@ -70,13 +78,15 @@ impl Page {
 
         init_vertex_buffers(&gl, &program)?;
 
-        let texture = gl.create_texture();
-        if texture.is_none() {
+        let texture0 = gl.create_texture();
+        let texture1 = gl.create_texture();
+        if texture0.is_none() || texture1.is_none() {
             return Err(JsError::new("Failed to create the texture object").into());
         }
 
-        let u_sampler = gl.get_uniform_location(&program, "u_Sampler");
-        if u_sampler.is_none() {
+        let u_sampler0 = gl.get_uniform_location(&program, "u_Sampler0");
+        let u_sampler1 = gl.get_uniform_location(&program, "u_Sampler0");
+        if u_sampler0.is_none() || u_sampler1.is_none() {
             return Err(JsError::new("Failed to get the storage location of u_Sampler").into());
         }
 
@@ -87,23 +97,42 @@ impl Page {
         gl.clear(GL::COLOR_BUFFER_BIT);
 
         self.gl = Some(gl);
-        self.texture = texture;
-        self.u_sampler = u_sampler;
+        self.texture0 = texture0;
+        self.texture1 = texture1;
+        self.u_sampler0 = u_sampler0;
+        self.u_sampler1 = u_sampler1;
         Ok(())
     }
 
-    fn request_texture(&mut self, link: yew::html::Scope<Self>) {
+    fn request_texture0(&mut self, link: yew::html::Scope<Self>) {
+        self.request_texture(
+            "/resources/sky.jpg",
+            Box::new(move |event| {
+                let image = event.target().unwrap().dyn_into().unwrap();
+                link.send_message(Message::Texture0Loaded(image));
+            }),
+        );
+    }
+
+    fn request_texture1(&mut self, link: yew::html::Scope<Self>) {
+        self.request_texture(
+            "/resources/circle.gif",
+            Box::new(move |event| {
+                let image = event.target().unwrap().dyn_into().unwrap();
+                link.send_message(Message::Texture1Loaded(image));
+            }),
+        );
+    }
+
+    fn request_texture(&mut self, src: &str, callback: Box<dyn FnMut(web_sys::Event)>) {
         let image = gloo::utils::document()
             .create_element("img")
             .unwrap()
             .dyn_into::<web_sys::HtmlImageElement>()
             .unwrap();
         image.set_cross_origin(Some("anonymous"));
-        image.set_src("/resources/sky.jpg");
-        let closure = Closure::wrap(Box::new(move |event: web_sys::Event| {
-            let image = event.target().unwrap().dyn_into().unwrap();
-            link.send_message(Message::TextureLoaded(image));
-        }) as Box<dyn FnMut(_)>);
+        image.set_src(src);
+        let closure = Closure::wrap(callback);
         image.set_onload(Some(closure.as_ref().unchecked_ref()));
         closure.forget();
         let closure = Closure::wrap(Box::new(move |_event: web_sys::Event| {
@@ -114,13 +143,42 @@ impl Page {
         closure.forget();
     }
 
-    fn load_texture(&self, image: HtmlImageElement) -> Result<(), JsValue> {
+    fn load_texture0(&mut self, image: HtmlImageElement) -> Result<(), JsValue> {
+        self.texture0_actived = true;
+        self.load_texture(
+            self.u_sampler0.as_ref(),
+            self.texture0.as_ref(),
+            GL::TEXTURE0,
+            0,
+            image,
+        )
+    }
+
+    fn load_texture1(&mut self, image: HtmlImageElement) -> Result<(), JsValue> {
+        self.texture1_actived = true;
+        self.load_texture(
+            self.u_sampler1.as_ref(),
+            self.texture1.as_ref(),
+            GL::TEXTURE1,
+            1,
+            image,
+        )
+    }
+
+    fn load_texture(
+        &self,
+        location: Option<&WebGlUniformLocation>,
+        texture: Option<&WebGlTexture>,
+        gl_unit: u32,
+        unit: i32,
+        image: HtmlImageElement,
+    ) -> Result<(), JsValue> {
         if let Some(gl) = self.gl.as_ref() {
             gl.pixel_storei(GL::UNPACK_FLIP_Y_WEBGL, 1);
-            // Enable texture unit0
-            gl.active_texture(GL::TEXTURE0);
+            // Make the texture unit active
+            gl.active_texture(gl_unit);
             // Bind the texture object to the target
-            gl.bind_texture(GL::TEXTURE_2D, self.texture.as_ref());
+            gl.bind_texture(GL::TEXTURE_2D, texture);
 
             // Set the texture parameters
             gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
@@ -128,20 +186,22 @@ impl Page {
             gl.tex_image_2d_with_u32_and_u32_and_html_image_element(
                 GL::TEXTURE_2D,
                 0,
-                GL::RGB as i32,
-                GL::RGB,
+                GL::RGBA as i32,
+                GL::RGBA,
                 GL::UNSIGNED_BYTE,
                 &image,
             )?;
 
             // Set the texture unit 0 to the sampler
-            gl.uniform1i(self.u_sampler.as_ref(), 0);
+            gl.uniform1i(location, unit);
 
-            // Clear <canvas>
-            gl.clear(GL::COLOR_BUFFER_BIT);
+            if self.texture0_actived && self.texture1_actived {
+                // Clear <canvas>
+                gl.clear(GL::COLOR_BUFFER_BIT);
 
-            // Draw the rectangle
-            gl.draw_arrays(GL::TRIANGLE_STRIP, 0, N);
+                // Draw the rectangle
+                gl.draw_arrays(GL::TRIANGLE_STRIP, 0, N);
+            }
         }
         Ok(())
     }
@@ -155,18 +215,25 @@ impl yew::Component for Page {
         Self {
             gl: None,
             canvas: NodeRef::default(),
-            texture: None,
-            u_sampler: None,
+            texture0: None,
+            texture1: None,
+            texture0_actived: false,
+            texture1_actived: false,
+            u_sampler0: None,
+            u_sampler1: None,
         }
     }
 
     fn update(&mut self, _ctx: &yew::Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Message::TextureLoaded(image) => {
-                self.load_texture(image).unwrap();
-                false
+            Message::Texture0Loaded(image) => {
+                self.load_texture0(image).unwrap();
+            }
+            Message::Texture1Loaded(image) => {
+                self.load_texture1(image).unwrap();
             }
         }
+        false
     }
 
     fn view(&self, _ctx: &yew::Context<Self>) -> yew::Html {
@@ -182,7 +249,8 @@ impl yew::Component for Page {
     fn rendered(&mut self, ctx: &yew::Context<Self>, first_render: bool) {
         if first_render {
             self.setup_gl().unwrap_throw();
-            self.request_texture(ctx.link().clone());
+            self.request_texture0(ctx.link().clone());
+            self.request_texture1(ctx.link().clone());
         }
     }
 }

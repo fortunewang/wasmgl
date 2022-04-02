@@ -4,9 +4,8 @@ use web_sys::{WebGl2RenderingContext as GL, WebGlProgram};
 
 use crate::utils::WebGl2RenderingContextExt;
 
-#[allow(non_camel_case_types)]
-#[yew::function_component(MultiAttributeSize_Interleaved)]
-pub fn multi_attribute_size_interleaved() -> yew::Html {
+#[yew::function_component(Page)]
+pub fn page() -> yew::Html {
     let canvas = yew::use_node_ref();
     crate::utils::use_webgl2_canvas_render(canvas.clone(), render);
 
@@ -62,7 +61,9 @@ fn render(gl: GL) -> Result<(), JsError> {
 }
 
 fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
-    let vertices_sizes = Float32Array::from(VERTICES_SIZES);
+    // let vertices_sizes = Float32Array::from(VERTICES_SIZES);
+    // use view() instead of from() to avoid additional memory allocation
+    let vertices_sizes = unsafe { Float32Array::view(VERTICES_SIZES) };
     let vertex_buffer = gl.create_buffer();
     if vertex_buffer.is_none() {
         return Err(JsError::new("Failed to create the buffer object"));

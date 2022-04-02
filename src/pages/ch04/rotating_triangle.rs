@@ -1,7 +1,7 @@
-use gloo::render::{request_animation_frame, AnimationFrame};
+use gloo::render::AnimationFrame;
 use js_sys::Float32Array;
 use nalgebra as na;
-use wasm_bindgen::{JsCast, JsError, JsValue, UnwrapThrowExt};
+use wasm_bindgen::{prelude::Closure, JsCast, JsError, JsValue, UnwrapThrowExt};
 use web_sys::{
     HtmlCanvasElement, WebGl2RenderingContext as GL, WebGlProgram, WebGlUniformLocation,
 };
@@ -37,7 +37,7 @@ pub enum Message {
     Animate(f64),
 }
 
-pub struct RotatingTriangle {
+pub struct Page {
     gl: Option<GL>,
     canvas: NodeRef,
     tick: Option<AnimationFrame>,
@@ -46,7 +46,7 @@ pub struct RotatingTriangle {
     last_render: Option<f64>,
 }
 
-impl RotatingTriangle {
+impl Page {
     fn get_canvas(&self) -> Option<HtmlCanvasElement> {
         self.canvas.cast::<HtmlCanvasElement>()
     }
@@ -83,10 +83,18 @@ impl RotatingTriangle {
     }
 
     fn reset_tick(&mut self, link: yew::html::Scope<Self>) {
+        let on_animate = move |now: f64| {
+            link.send_message(Message::Animate(now));
+        };
+
+        let closure = Closure::wrap(Box::new(on_animate) as Box<dyn FnMut(_)>);
+        gloo::utils::window()
+            .request_animation_frame(closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget();
+
         // A reference to the new handle must be retained for the next render to run.
-        self.tick = Some(request_animation_frame(move |now| {
-            link.send_message(Message::Animate(now))
-        }));
+        // self.tick = Some(gloo::render::request_animation_frame(on_animate));
     }
 
     fn animate(&mut self, link: yew::html::Scope<Self>, now: f64) {
@@ -121,7 +129,7 @@ impl RotatingTriangle {
     }
 }
 
-impl yew::Component for RotatingTriangle {
+impl yew::Component for Page {
     type Message = Message;
     type Properties = ();
 
@@ -165,7 +173,9 @@ impl yew::Component for RotatingTriangle {
 }
 
 fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
-    let vertices = Float32Array::from(VERTICES);
+    // let vertices = Float32Array::from(VERTICES);
+    // use view() instead of from() to avoid additional memory allocation
+    let vertices = unsafe { Float32Array::view(VERTICES) };
     let vertex_buffer = gl.create_buffer();
     if vertex_buffer.is_none() {
         return Err(JsError::new("Failed to create the buffer object"));

@@ -32,10 +32,10 @@ const N: i32 = 4;
 
 // Vertex coordinates, texture coordinate
 const VERTICES_COLORS: &[f32] = &[
-    -0.5, 0.5, 0.0, 1.0, //
-    -0.5, -0.5, 0.0, 0.0, //
-    0.5, 0.5, 1.0, 1.0, //
-    0.5, -0.5, 1.0, 0.0, //
+    -0.5, 0.5, -0.3, 1.7, //
+    -0.5, -0.5, -0.3, -0.2, //
+    0.5, 0.5, 1.7, 1.7, //
+    0.5, -0.5, 1.7, -0.2, //
 ];
 
 const FSIZE: i32 = std::mem::size_of::<f32>() as i32;
@@ -124,6 +124,12 @@ impl Page {
 
             // Set the texture parameters
             gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
+            gl.tex_parameteri(
+                GL::TEXTURE_2D,
+                GL::TEXTURE_WRAP_T,
+                GL::MIRRORED_REPEAT as i32,
+            );
+            gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
             // Set the texture image
             gl.tex_image_2d_with_u32_and_u32_and_html_image_element(
                 GL::TEXTURE_2D,

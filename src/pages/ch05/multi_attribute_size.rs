@@ -4,8 +4,8 @@ use web_sys::{WebGl2RenderingContext as GL, WebGlProgram};
 
 use crate::utils::WebGl2RenderingContextExt;
 
-#[yew::function_component(MultiAttributeSize)]
-pub fn multi_attribute_size() -> yew::Html {
+#[yew::function_component(Page)]
+pub fn page() -> yew::Html {
     let canvas = yew::use_node_ref();
     crate::utils::use_webgl2_canvas_render(canvas.clone(), render);
 
@@ -56,7 +56,9 @@ fn render(gl: GL) -> Result<(), JsError> {
 }
 
 fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
-    let vertices = Float32Array::from(VERTICES);
+    // let vertices = Float32Array::from(VERTICES);
+    // use view() instead of from() to avoid additional memory allocation
+    let vertices = unsafe { Float32Array::view(VERTICES) };
     let vertex_buffer = gl.create_buffer();
     if vertex_buffer.is_none() {
         return Err(JsError::new("Failed to create the buffer object"));
@@ -78,7 +80,9 @@ fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
 }
 
 fn init_size_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
-    let sizes = Float32Array::from(SIZES);
+    // let sizes = Float32Array::from(SIZES);
+    // use view() instead of from() to avoid additional memory allocation
+    let sizes = unsafe { Float32Array::view(SIZES) };
     let size_buffer = gl.create_buffer();
     if size_buffer.is_none() {
         return Err(JsError::new("Failed to create the buffer object"));

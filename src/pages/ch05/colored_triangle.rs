@@ -47,7 +47,7 @@ pub enum Message {
     ChangeMode(Mode),
 }
 
-pub struct ColoredTriangle {
+pub struct Page {
     gl: Option<GL>,
     canvas: NodeRef,
     mode: Mode,
@@ -56,7 +56,7 @@ pub struct ColoredTriangle {
     onclick_triangles: yew::Callback<web_sys::MouseEvent>,
 }
 
-impl ColoredTriangle {
+impl Page {
     fn get_canvas(&self) -> Option<HtmlCanvasElement> {
         self.canvas.cast::<HtmlCanvasElement>()
     }
@@ -96,7 +96,7 @@ impl ColoredTriangle {
     }
 }
 
-impl yew::Component for ColoredTriangle {
+impl yew::Component for Page {
     type Message = Message;
     type Properties = ();
 
@@ -156,7 +156,9 @@ impl yew::Component for ColoredTriangle {
 }
 
 fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
-    let vertices_colors = Float32Array::from(VERTICES_COLORS);
+    // let vertices_colors = Float32Array::from(VERTICES_COLORS);
+    // use view() instead of from() to avoid additional memory allocation
+    let vertices_colors = unsafe { Float32Array::view(VERTICES_COLORS) };
     let vertex_buffer = gl.create_buffer();
     if vertex_buffer.is_none() {
         return Err(JsError::new("Failed to create the buffer object"));

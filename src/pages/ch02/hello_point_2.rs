@@ -3,8 +3,8 @@ use web_sys::WebGl2RenderingContext as GL;
 
 use crate::utils::WebGl2RenderingContextExt;
 
-#[yew::function_component(HelloPoint2)]
-pub fn hello_point_2() -> yew::Html {
+#[yew::function_component(Page)]
+pub fn page() -> yew::Html {
     let canvas = yew::use_node_ref();
     crate::utils::use_webgl2_canvas_render(canvas.clone(), render);
 

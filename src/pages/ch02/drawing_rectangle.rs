@@ -1,8 +1,8 @@
 use wasm_bindgen::{JsError, JsValue};
 use web_sys::CanvasRenderingContext2d;
 
-#[yew::function_component(DrawingRectangle)]
-pub fn drawing_rectangle() -> yew::Html {
+#[yew::function_component(Page)]
+pub fn page() -> yew::Html {
     let canvas = yew::use_node_ref();
     crate::utils::use_2d_canvas_render(canvas.clone(), render);
 

@@ -1,8 +1,8 @@
 use wasm_bindgen::JsError;
 use web_sys::WebGl2RenderingContext as GL;
 
-#[yew::function_component(HelloCanvas)]
-pub fn hello_canvas() -> yew::Html {
+#[yew::function_component(Page)]
+pub fn page() -> yew::Html {
     let canvas = yew::use_node_ref();
     crate::utils::use_webgl2_canvas_render(canvas.clone(), render);
 

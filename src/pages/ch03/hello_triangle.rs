@@ -36,7 +36,7 @@ pub enum Message {
     ChangeMode(Mode),
 }
 
-pub struct HelloTriangle {
+pub struct Page {
     gl: Option<GL>,
     canvas: NodeRef,
     mode: Mode,
@@ -47,7 +47,7 @@ pub struct HelloTriangle {
     onclick_line_loop: yew::Callback<web_sys::MouseEvent>,
 }
 
-impl HelloTriangle {
+impl Page {
     fn get_canvas(&self) -> Option<HtmlCanvasElement> {
         self.canvas.cast::<HtmlCanvasElement>()
     }
@@ -84,7 +84,7 @@ impl HelloTriangle {
     }
 }
 
-impl yew::Component for HelloTriangle {
+impl yew::Component for Page {
     type Message = Message;
     type Properties = ();
 
@@ -156,7 +156,9 @@ impl yew::Component for HelloTriangle {
 }
 
 fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
-    let vertices = Float32Array::from(VERTICES);
+    // let vertices = Float32Array::from(VERTICES);
+    // use view() instead of from() to avoid additional memory allocation
+    let vertices = unsafe { Float32Array::view(VERTICES) };
     let vertex_buffer = gl.create_buffer();
     if vertex_buffer.is_none() {
         return Err(JsError::new("Failed to create the buffer object"));

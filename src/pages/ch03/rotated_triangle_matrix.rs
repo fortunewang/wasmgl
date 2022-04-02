@@ -4,9 +4,8 @@ use web_sys::{WebGl2RenderingContext as GL, WebGlProgram};
 
 use crate::utils::WebGl2RenderingContextExt;
 
-#[allow(non_camel_case_types)]
-#[yew::function_component(RotatedTriangle_Matrix)]
-pub fn rotated_triangle_matrix() -> yew::Html {
+#[yew::function_component(Page)]
+pub fn page() -> yew::Html {
     let canvas = yew::use_node_ref();
     crate::utils::use_webgl2_canvas_render(canvas.clone(), render);
 
@@ -73,7 +72,9 @@ fn render(gl: GL) -> Result<(), JsError> {
 }
 
 fn init_vertex_buffers(gl: &GL, program: &WebGlProgram) -> Result<(), JsError> {
-    let vertices = Float32Array::from(VERTICES);
+    // let vertices = Float32Array::from(VERTICES);
+    // use view() instead of from() to avoid additional memory allocation
+    let vertices = unsafe { Float32Array::view(VERTICES) };
     let vertex_buffer = gl.create_buffer();
     if vertex_buffer.is_none() {
         return Err(JsError::new("Failed to create the buffer object"));

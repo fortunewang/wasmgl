@@ -31,7 +31,15 @@ pub fn sidemenu() -> Html {
             <li><Link<Page> to={Page::MultiAttributeSize}>{ "MultiAttributeSize" }</Link<Page>></li>
             <li><Link<Page> to={Page::MultiAttributeSize_Interleaved}>{ "MultiAttributeSize_Interleaved" }</Link<Page>></li>
             <li><Link<Page> to={Page::ColoredTriangle}>{ "ColoredTriangle" }</Link<Page>></li>
+            <li><Link<Page> to={Page::HelloTriangle_FragCoord}>{ "HelloTriangle_FragCoord" }</Link<Page>></li>
             <li><Link<Page> to={Page::TexturedQuad}>{ "TexturedQuad" }</Link<Page>></li>
+            <li><Link<Page> to={Page::TexturedQuad_Repeat}>{ "TexturedQuad_Repeat" }</Link<Page>></li>
+            <li><Link<Page> to={Page::TexturedQuad_Clamp_Mirror}>{ "TexturedQuad_Clamp_Mirror" }</Link<Page>></li>
+            <li><Link<Page> to={Page::MultiTexture}>{ "MultiTexture" }</Link<Page>></li>
+
+            <li><Link<Page> to={Page::LookAtTriangles}>{ "LookAtTriangles" }</Link<Page>></li>
+            <li><Link<Page> to={Page::LookAtRotatedTriangles}>{ "LookAtRotatedTriangles" }</Link<Page>></li>
+            <li><Link<Page> to={Page::LookAtTrianglesWithKeys}>{ "LookAtTrianglesWithKeys" }</Link<Page>></li>
         </ul>
         </div>
     }
