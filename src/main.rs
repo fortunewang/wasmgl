@@ -1,5 +1,5 @@
 mod app;
-mod layout;
+mod components;
 mod pages;
 mod sidemenu;
 mod utils;

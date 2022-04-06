@@ -10,13 +10,19 @@ body {
 .wasmgl-layout {
   display: flex;
   position: relative;
+  height: 100%;
 }
 
 .wasmgl-content {
   background-color: #f0f2f5;
   padding: 16px;
+  flex-grow: 1;
 }
 
 .wasmgl-sidemenu {
   height: 100%;
+  overflow-y: auto;
+  width: 300px;
 }
+
+@import 'src/styles/sidenav';
