@@ -195,21 +195,23 @@ impl yew::Component for Page {
             }
             Message::MouseMove(x, y) => {
                 if let Some((diff_x, diff_y)) = self.draging.onmousemove(x, y) {
-                    let old_eye_x = self.eye_x;
-                    let old_eye_y = self.eye_y;
-                    self.eye_x += diff_x as f32 / 1000.0;
-                    self.eye_y -= diff_y as f32 / 1000.0;
                     if let Some(gl) = self.gl.as_ref() {
+                        let old_eye_x = self.eye_x;
+                        let old_eye_y = self.eye_y;
+                        self.eye_x += diff_x as f32 / gl.drawing_buffer_width() as f32;
+                        self.eye_y -= diff_y as f32 / gl.drawing_buffer_height() as f32;
                         self.rerender_triangle(gl);
+                        self.eye_x = old_eye_x;
+                        self.eye_y = old_eye_y;
                     }
-                    self.eye_x = old_eye_x;
-                    self.eye_y = old_eye_y;
                 }
             }
             Message::MouseUp(x, y) => {
                 if let Some((diff_x, diff_y)) = self.draging.onmouseup(x, y) {
-                    self.eye_x += diff_x as f32 / 1000.0;
-                    self.eye_y -= diff_y as f32 / 1000.0;
+                    if let Some(gl) = self.gl.as_ref() {
+                        self.eye_x += diff_x as f32 / gl.drawing_buffer_width() as f32;
+                        self.eye_y -= diff_y as f32 / gl.drawing_buffer_height() as f32;
+                    }
                 }
             }
         }

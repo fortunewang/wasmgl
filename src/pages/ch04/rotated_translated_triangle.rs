@@ -154,11 +154,11 @@ impl yew::Component for Page {
                     <button
                         onclick={self.onclick_rotated_translated.clone()}
                         disabled={self.mode == Mode::RotatedTranslated}
-                    >{ "rotation -> translation" }</button>
+                    >{ "translation -> rotation" }</button>
                     <button
                         onclick={self.onclick_translated_rotated.clone()}
                         disabled={self.mode == Mode::TranslatedRotated}
-                    >{ "translation -> rotation" }</button>
+                    >{ "rotation -> translation" }</button>
                 </p>
             </div>
         }

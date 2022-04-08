@@ -1,7 +1,7 @@
 use gloo::render::AnimationFrame;
 use js_sys::Float32Array;
 use nalgebra as na;
-use wasm_bindgen::{prelude::Closure, JsCast, JsError, JsValue, UnwrapThrowExt};
+use wasm_bindgen::{JsCast, JsError, JsValue, UnwrapThrowExt};
 use web_sys::{
     HtmlCanvasElement, WebGl2RenderingContext as GL, WebGlProgram, WebGlUniformLocation,
 };
@@ -87,14 +87,8 @@ impl Page {
             link.send_message(Message::Animate(now));
         };
 
-        let closure = Closure::wrap(Box::new(on_animate) as Box<dyn FnMut(_)>);
-        gloo::utils::window()
-            .request_animation_frame(closure.as_ref().unchecked_ref())
-            .unwrap();
-        closure.forget();
-
         // A reference to the new handle must be retained for the next render to run.
-        // self.tick = Some(gloo::render::request_animation_frame(on_animate));
+        self.tick = Some(gloo::render::request_animation_frame(on_animate));
     }
 
     fn animate(&mut self, link: yew::html::Scope<Self>, now: f64) {
@@ -169,6 +163,11 @@ impl yew::Component for Page {
         if first_render {
             self.setup_gl(ctx.link().clone()).unwrap_throw();
         }
+    }
+
+    fn destroy(&mut self, _ctx: &yew::Context<Self>) {
+        // cancelAnimationFrame
+        self.tick = None;
     }
 }
 
