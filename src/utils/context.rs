@@ -6,6 +6,7 @@ use yew::NodeRef;
 
 fn noop() {}
 
+#[yew::hook]
 pub fn use_canvas_render<C: FnOnce(HtmlCanvasElement) -> Result<(), JsValue> + 'static>(
     node: NodeRef,
     render: C,
@@ -20,6 +21,7 @@ pub fn use_canvas_render<C: FnOnce(HtmlCanvasElement) -> Result<(), JsValue> + '
     )
 }
 
+#[yew::hook]
 pub fn use_2d_canvas_render<
     C: FnOnce(CanvasRenderingContext2d) -> Result<(), JsError> + 'static,
 >(
@@ -38,6 +40,7 @@ pub fn use_2d_canvas_render<
     })
 }
 
+#[yew::hook]
 pub fn use_webgl2_canvas_render<
     C: FnOnce(WebGl2RenderingContext) -> Result<(), JsError> + 'static,
 >(

@@ -2,7 +2,7 @@ use js_sys::Float32Array;
 use nalgebra as na;
 use wasm_bindgen::{prelude::Closure, JsCast, JsError, JsValue, UnwrapThrowExt};
 use web_sys::{
-    HtmlCanvasElement, WebGl2RenderingContext as GL, WebGlProgram, WebGlUniformLocation,
+    HtmlCanvasElement, KeyEvent, WebGl2RenderingContext as GL, WebGlProgram, WebGlUniformLocation,
 };
 use yew::NodeRef;
 
@@ -12,9 +12,10 @@ const VSHADER_SOURCE: &str = "
 attribute vec4 a_Position;
 attribute vec4 a_Color;
 uniform mat4 u_ViewMatrix;
+uniform mat4 u_ProjMatrix;
 varying vec4 v_Color;
 void main() {
-    gl_Position = u_ViewMatrix * a_Position;
+    gl_Position = u_ProjMatrix * u_ViewMatrix * a_Position;
     v_Color = a_Color;
 }
 ";
@@ -58,6 +59,9 @@ pub struct Page {
     gl: Option<GL>,
     canvas: NodeRef,
     u_view_matrix: Option<WebGlUniformLocation>,
+    u_proj_matrix: Option<WebGlUniformLocation>,
+    near: f32,
+    far: f32,
     eye_x: f32,
     eye_y: f32,
     draging: Draging,
@@ -85,8 +89,12 @@ impl Page {
         init_vertex_buffers(&gl, &program)?;
 
         let u_view_matrix = gl.get_uniform_location(&program, "u_ViewMatrix");
-        if u_view_matrix.is_none() {
-            return Err(JsError::new("Failed to get the storage location of u_ViewMatrix").into());
+        let u_proj_matrix = gl.get_uniform_location(&program, "u_ProjMatrix");
+        if u_view_matrix.is_none() || u_proj_matrix.is_none() {
+            return Err(JsError::new(
+                "Failed to get the storage location of u_ViewMatrix or u_ProjMatrix",
+            )
+            .into());
         }
 
         // Unbind the buffer object
@@ -96,6 +104,7 @@ impl Page {
         gl.clear_color(0.0, 0.0, 0.0, 1.0);
 
         self.u_view_matrix = u_view_matrix;
+        self.u_proj_matrix = u_proj_matrix;
         self.rerender_triangle(&gl);
 
         self.gl = Some(gl);
@@ -103,6 +112,13 @@ impl Page {
     }
 
     fn rerender_triangle(&self, gl: &GL) {
+        let proj_matrix = na::Matrix4::new_orthographic(-1.0, 1.0, -1.0, 1.0, self.near, self.far);
+        gl.uniform_matrix4fv_with_f32_array(
+            self.u_proj_matrix.as_ref(),
+            false,
+            proj_matrix.as_slice(),
+        );
+
         // Set the matrix to be used for to set the camera view
         let view_matrix = na::Matrix4::look_at_rh(
             &na::Point3::new(self.eye_x, self.eye_y, 0.25),
@@ -133,6 +149,9 @@ impl yew::Component for Page {
             gl: None,
             canvas: NodeRef::default(),
             u_view_matrix: None,
+            u_proj_matrix: None,
+            near: 0.0,
+            far: 2.0,
             eye_x: 0.0,
             eye_y: 0.0,
             draging: Draging::default(),
@@ -238,17 +257,18 @@ impl yew::Component for Page {
 
             let link = ctx.link().clone();
             let closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+                // https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/keyCode
                 match event.key_code() {
-                    37 => {
+                    KeyEvent::DOM_VK_LEFT => {
                         link.send_message(Message::KeyLeft);
                     }
-                    38 => {
+                    KeyEvent::DOM_VK_UP => {
                         link.send_message(Message::KeyUp);
                     }
-                    39 => {
+                    KeyEvent::DOM_VK_RIGHT => {
                         link.send_message(Message::KeyRight);
                     }
-                    40 => {
+                    KeyEvent::DOM_VK_DOWN => {
                         link.send_message(Message::KeyDown);
                     }
                     _ => {}

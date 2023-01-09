@@ -65,7 +65,7 @@ pub enum Page {
     LookAtTrianglesWithKeys,
 }
 
-pub fn render_page(page: &Page) -> yew::Html {
+pub fn render_page(page: Page) -> yew::Html {
     use Page::*;
     match page {
         Home => yew::html! { <Redirect<Page> to={Page::HelloCanvas} />},

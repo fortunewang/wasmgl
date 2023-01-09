@@ -10,7 +10,7 @@ pub fn app() -> yew::Html {
         <div class="wasmgl-layout">
             <Sidemenu />
             <div class="wasmgl-content">
-                <Switch<Page> render={Switch::render(render_page)} />
+                <Switch<Page> render={render_page} />
             </div>
         </div>
         </BrowserRouter>

@@ -4,7 +4,7 @@ use yew::{function_component, html};
 use yew_router::components::Link;
 
 #[function_component(Sidemenu)]
-pub fn sidemenu() -> Html {
+pub fn sidemenu() -> yew::Html {
     html! {
         <div class="wasmgl-sidemenu">
         <Menu>
